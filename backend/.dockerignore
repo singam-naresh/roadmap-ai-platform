@@ -1,5 +1,26 @@
+# Build artifacts — not needed in Docker build context
 target/
-*.md
+
+# Environment files — secrets must come from env vars, not files
+.env
+.env.*
+!.env.example
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Git
 .git/
 .gitignore
-.mvn/
+
+# Logs and data
+logs/
+*.log
+data/
+
+# Documentation
+*.md
