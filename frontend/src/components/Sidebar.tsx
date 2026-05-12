@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  History, Star, Search, ChevronLeft, ChevronRight,
-  LayoutDashboard, Settings, Plus, MessageSquare, Zap, Filter, Clock, LogOut,
+  History, Search, ChevronLeft, ChevronRight,
+  LayoutDashboard, Plus, MessageSquare, Zap, Filter, Clock, LogOut,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import type { TaskResponse } from '../types';
@@ -29,8 +29,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 function relativeTime(dateStr: string): string {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
-  if (diff < 60_000)    return 'just now';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 60_000)     return 'just now';
+  if (diff < 3_600_000)  return `${Math.floor(diff / 60_000)}m ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
   return `${Math.floor(diff / 86_400_000)}d ago`;
 }
@@ -38,6 +38,7 @@ function relativeTime(dateStr: string): string {
 const Sidebar: React.FC<SidebarProps> = ({ history, onSelectHistory, onNewExecution, activeId }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -46,6 +47,12 @@ const Sidebar: React.FC<SidebarProps> = ({ history, onSelectHistory, onNewExecut
     const q = searchQuery.toLowerCase();
     return history.filter(t => t.userInput?.toLowerCase().includes(q));
   }, [history, searchQuery]);
+
+  const navItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: MessageSquare,   label: 'Chat',      path: '/chat' },
+    { icon: History,         label: 'History',   path: '/history' },
+  ];
 
   return (
     <motion.aside
@@ -71,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ history, onSelectHistory, onNewExecut
         </button>
       </div>
 
-      {/* New Execution */}
+      {/* New Roadmap */}
       <div className="px-4 mb-6">
         <button
           onClick={onNewExecution}
@@ -83,7 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({ history, onSelectHistory, onNewExecut
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 space-y-8">
-        {/* Workspace nav */}
+        {/* Navigation */}
         <section>
           {!isCollapsed && (
             <div className="flex items-center justify-between mb-4 px-2">
@@ -91,30 +98,34 @@ const Sidebar: React.FC<SidebarProps> = ({ history, onSelectHistory, onNewExecut
             </div>
           )}
           <div className="space-y-1">
-            {[
-              { icon: LayoutDashboard, label: 'Dashboard',        action: () => navigate('/') },
-              { icon: MessageSquare,   label: 'Chat',             action: () => navigate('/') },
-              { icon: History,         label: 'History',          action: () => navigate('/history') },
-            ].map(item => (
-              <button
-                key={item.label}
-                onClick={item.action}
-                className="w-full p-3 flex items-center gap-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all group"
-              >
-                <item.icon size={18} className="group-hover:text-purple-400 transition-colors" />
-                {!isCollapsed && <span className="text-xs font-bold uppercase tracking-wider">{item.label}</span>}
-              </button>
-            ))}
+            {navItems.map(item => {
+              const isActive = location.pathname === item.path ||
+                (item.path === '/' && location.pathname === '/dashboard');
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => navigate(item.path)}
+                  className={`w-full p-3 flex items-center gap-3 rounded-xl transition-all group ${
+                    isActive
+                      ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                  }`}
+                >
+                  <item.icon size={18} className={isActive ? 'text-purple-400' : 'group-hover:text-purple-400 transition-colors'} />
+                  {!isCollapsed && <span className="text-xs font-bold uppercase tracking-wider">{item.label}</span>}
+                </button>
+              );
+            })}
           </div>
         </section>
 
-        {/* History */}
+        {/* Recent history */}
         <section>
           {!isCollapsed && (
             <div className="space-y-4 mb-4 px-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold">
-                  Recent Roadmaps {history.length > 0 && `(${history.length})`}
+                  Recent {history.length > 0 && `(${history.length})`}
                 </h3>
                 <Filter size={14} className="text-slate-500 cursor-pointer hover:text-white" />
               </div>
@@ -122,7 +133,7 @@ const Sidebar: React.FC<SidebarProps> = ({ history, onSelectHistory, onNewExecut
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
                 <input
                   type="text"
-                  placeholder="Search history…"
+                  placeholder="Search history"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full bg-white/5 border border-white/5 rounded-lg py-2 pl-9 pr-4 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-purple-500/50 transition-all"
@@ -134,7 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({ history, onSelectHistory, onNewExecut
           <div className="space-y-2">
             {filtered.length === 0 && !isCollapsed && (
               <p className="text-[10px] text-slate-600 text-center py-4 uppercase tracking-widest">
-                {history.length === 0 ? 'No plans yet' : 'No results'}
+                {history.length === 0 ? 'No roadmaps yet' : 'No results'}
               </p>
             )}
             {filtered.map(task => {
@@ -178,7 +189,6 @@ const Sidebar: React.FC<SidebarProps> = ({ history, onSelectHistory, onNewExecut
 
       {/* Footer */}
       <div className="p-4 border-t border-white/5 space-y-2">
-        {/* User Profile */}
         <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group">
           <div className="relative">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-600 to-blue-600 border border-white/10 flex items-center justify-center">
@@ -199,16 +209,12 @@ const Sidebar: React.FC<SidebarProps> = ({ history, onSelectHistory, onNewExecut
             </div>
           )}
         </div>
-
-        {/* Logout Button */}
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-red-500/10 hover:border-red-500/20 border border-transparent transition-all group text-slate-400 hover:text-red-400"
+          className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all group text-slate-400 hover:text-red-400"
         >
           <LogOut size={18} className="group-hover:text-red-400 transition-colors" />
-          {!isCollapsed && (
-            <span className="text-xs font-bold uppercase tracking-wider">Logout</span>
-          )}
+          {!isCollapsed && <span className="text-xs font-bold uppercase tracking-wider">Logout</span>}
         </button>
       </div>
     </motion.aside>

@@ -1,6 +1,7 @@
 import React from 'react';
 import '@radix-ui/themes/styles.css';
 import './src/styles/scrollbar.css';
+import './styles.css';
 import { Theme } from '@radix-ui/themes';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -22,23 +23,45 @@ const App: React.FC = () => {
           <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <main className="min-h-screen font-sans bg-[#050816]">
               <Routes>
+                {/* Auth */}
                 <Route path="/auth" element={<AuthPage />} />
-                <Route 
-                  path="/" 
+
+                {/* Main app — all protected */}
+                <Route
+                  path="/"
                   element={
                     <ProtectedRoute>
                       <Home />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/history" 
+                {/* /chat and /dashboard both render Home — view state is managed inside Home */}
+                <Route
+                  path="/chat"
+                  element={
+                    <ProtectedRoute>
+                      <Home />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Home />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/history"
                   element={
                     <ProtectedRoute>
                       <ExecutionHistory />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
+
+                {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <ToastContainer
@@ -56,6 +79,6 @@ const App: React.FC = () => {
       </Theme>
     </ErrorBoundary>
   );
-}
+};
 
 export default App;

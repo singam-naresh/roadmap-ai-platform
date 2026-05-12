@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import GlowBackground from '../components/GlowBackground';
 import PromptBox from '../components/PromptBox';
@@ -48,7 +49,19 @@ const Home: React.FC = () => {
 
   const workspace = usePersistedWorkspace();
   const streaming = useStreamingGeneration();
+  const location  = useLocation();
+  const navigate  = useNavigate();
   const toast     = useToast();
+
+  // When navigating to /chat, switch to response view if there's an active response
+  useEffect(() => {
+    if (location.pathname === '/chat' && currentResponse) {
+      setView('response');
+    } else if (location.pathname === '/' || location.pathname === '/dashboard') {
+      // Dashboard nav — go to dashboard view but keep state
+      if (!currentResponse) setView('dashboard');
+    }
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Layout ready gate — prevents hydration layout shift
   useEffect(() => {
@@ -231,7 +244,8 @@ const Home: React.FC = () => {
     setActiveConversationId(null);
     workspace.setActiveTask(null);
     workspace.setLastView('dashboard');
-  }, [workspace]);
+    navigate('/');
+  }, [workspace, navigate]);
 
   // Determine if continuation bar should be shown
   const showContinuation = !!(
@@ -269,7 +283,7 @@ const Home: React.FC = () => {
             </div>
             <nav className="hidden md:flex items-center gap-1 p-1 bg-white/5 rounded-xl border border-white/5">
               <button
-                onClick={() => setView('dashboard')}
+                onClick={() => { setView('dashboard'); navigate('/'); }}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2 ${
                   view === 'dashboard' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'
                 }`}
@@ -277,7 +291,7 @@ const Home: React.FC = () => {
                 <LayoutGrid size={14} /> DASHBOARD
               </button>
               <button
-                onClick={() => setView('response')}
+                onClick={() => { if (currentResponse) { setView('response'); navigate('/chat'); } }}
                 disabled={!currentResponse && !isGenerating}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed ${
                   view === 'response' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'
