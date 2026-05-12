@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: roadmap-ai-backend
+    runtime: java
+    region: oregon
+    plan: free
+
+    # Build command — produces the fat JAR
+    buildCommand: cd backend && ./mvnw clean package -DskipTests
+
+    # Start command — Render injects $PORT automatically
+    startCommand: java -jar backend/target/ai-productivity-assistant-0.0.1-SNAPSHOT.jar
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: PORT
+        generateValue: false
+        value: 8080
+      - key: GROQ_API_KEY
+        sync: false          # Set this manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true  # Render generates a secure random value
+      - key: ALLOWED_ORIGINS
+        sync: false          # Set to your Vercel frontend URL
+      - key: H2_CONSOLE_ENABLED
+        value: "false"

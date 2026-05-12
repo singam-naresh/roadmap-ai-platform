@@ -1,0 +1,113 @@
+# PHASE 4: Alerting Rules for Aura OS Production Monitoring
+groups:
+  - name: aura_os_alerts
+    rules:
+      # High Memory Usage Alert
+      - alert: HighMemoryUsage
+        expr: (aura_system_memory_used / aura_system_memory_max) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: aura-backend
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% for more than 5 minutes"
+
+      # Critical Memory Usage Alert
+      - alert: CriticalMemoryUsage
+        expr: (aura_system_memory_used / aura_system_memory_max) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: aura-backend
+        annotations:
+          summary: "Critical memory usage detected"
+          description: "Memory usage is above 95% for more than 2 minutes"
+
+      # High AI Pipeline Generation Time
+      - alert: SlowAIPipelineGeneration
+        expr: aura_ai_roadmap_generation_duration_seconds > 30
+        for: 3m
+        labels:
+          severity: warning
+          service: aura-ai-pipeline
+        annotations:
+          summary: "AI Pipeline generation is slow"
+          description: "Roadmap generation taking more than 30 seconds"
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(aura_service_execution_count{status="error"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: aura-backend
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 10% for more than 2 minutes"
+
+      # Service Down Alert
+      - alert: ServiceDown
+        expr: up{job="aura-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: aura-backend
+        annotations:
+          summary: "Aura OS Backend is down"
+          description: "The Aura OS backend service is not responding"
+
+      # Database Connection Issues
+      - alert: DatabaseConnectionIssues
+        expr: aura_repository_execution_count{status="error"} > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: aura-database
+        annotations:
+          summary: "Database connection issues detected"
+          description: "Multiple database errors detected"
+
+      # High Active Generations
+      - alert: HighActiveGenerations
+        expr: aura_ai_roadmap_generation_active > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: aura-ai-pipeline
+        annotations:
+          summary: "High number of active AI generations"
+          description: "More than 10 concurrent AI generations for 5+ minutes"
+
+      # Groq API Issues
+      - alert: GroqAPIIssues
+        expr: rate(aura_groq_api_duration_seconds{status="error"}[5m]) > 0.2
+        for: 3m
+        labels:
+          severity: warning
+          service: groq-api
+        annotations:
+          summary: "Groq API error rate is high"
+          description: "Groq API error rate above 20% for 3+ minutes"
+
+      # Low Disk Space
+      - alert: LowDiskSpace
+        expr: aura_system_disk_usage_percent > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: aura-system
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage above 90% for more than 5 minutes"
+
+      # High Thread Count
+      - alert: HighThreadCount
+        expr: aura_system_threads_active > 200
+        for: 5m
+        labels:
+          severity: warning
+          service: aura-system
+        annotations:
+          summary: "High thread count detected"
+          description: "Active thread count above 200 for 5+ minutes"

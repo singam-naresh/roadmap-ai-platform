@@ -1,0 +1,59 @@
+# PHASE 4: Production Docker Configuration for Aura OS Backend
+FROM openjdk:21-jdk-slim as builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy Maven files
+COPY pom.xml .
+COPY .mvn .mvn
+COPY mvnw .
+
+# Download dependencies (cached layer)
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
+COPY src ./src
+
+# Build application
+RUN ./mvnw clean package -DskipTests
+
+# Production runtime image
+FROM openjdk:21-jre-slim
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Create app user for security
+RUN groupadd -r aura && useradd -r -g aura aura
+
+# Set working directory
+WORKDIR /app
+
+# Copy built JAR from builder stage
+COPY --from=builder /app/target/*.jar app.jar
+
+# Create data directory with proper permissions
+RUN mkdir -p /app/data && chown -R aura:aura /app
+
+# Switch to non-root user
+USER aura
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8080/api/health || exit 1
+
+# JVM optimization for production
+ENV JAVA_OPTS="-Xms512m -Xmx2g -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+OptimizeStringConcat"
+
+# Run application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+
+# Labels for metadata
+LABEL maintainer="Aura OS Team"
+LABEL version="1.0.0"
+LABEL description="Aura OS - AI-Powered Productivity Assistant Backend"
+LABEL phase="PHASE 4 - Production Deployment & Monitoring"
