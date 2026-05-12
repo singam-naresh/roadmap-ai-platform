@@ -104,11 +104,39 @@ public class GlobalExceptionHandler {
 
     /**
      * Handles RuntimeExceptions from the service layer (including Groq API errors).
+     * In production, returns a clean user-friendly message without internal details.
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
-        log.error("[service] Runtime error: {}", ex.getMessage());
-        return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        String msg = ex.getMessage();
+        log.error("[service] Runtime error: {}", msg);
+
+        // Map known AI provider errors to friendly messages
+        if (msg != null) {
+            if (msg.contains("Prompt too long") || msg.contains("context")) {
+                return errorResponse(HttpStatus.BAD_REQUEST,
+                        "Your request is too long. Please shorten it and try again.");
+            }
+            if (msg.contains("AI service temporarily") || msg.contains("503") || msg.contains("502")) {
+                return errorResponse(HttpStatus.SERVICE_UNAVAILABLE,
+                        "The AI service is temporarily unavailable. Please try again in a moment.");
+            }
+            if (msg.contains("configuration error") || msg.contains("api_key")) {
+                return errorResponse(HttpStatus.SERVICE_UNAVAILABLE,
+                        "AI service configuration error. Please contact support.");
+            }
+            if (msg.contains("Rate limit") || msg.contains("429")) {
+                return errorResponse(HttpStatus.TOO_MANY_REQUESTS,
+                        "Too many requests. Please wait a moment and try again.");
+            }
+            if (msg.contains("not authenticated") || msg.contains("User not found")) {
+                return errorResponse(HttpStatus.UNAUTHORIZED, "Authentication required.");
+            }
+        }
+
+        // Generic fallback — never expose internal stack traces
+        return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Something went wrong. Please try again.");
     }
 
     /**

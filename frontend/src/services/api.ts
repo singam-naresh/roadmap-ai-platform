@@ -109,21 +109,10 @@ async function request<T>(url: string, options?: RequestInit, retries = 1): Prom
       err?.name === 'TypeError' || // Network errors often show as TypeError
       (err instanceof ApiError && err.status && err.status >= 500)
     )) {
-      console.log(`[api] Retrying request to ${url} (${retries} retries left)`);
       await new Promise(r => setTimeout(r, 1000 * (2 - retries))); // Exponential backoff
       return request<T>(url, options, retries - 1);
     }
-    
-    // Log error for debugging (but don't spam console)
-    if (!(err instanceof ApiError && err.status === 401)) {
-      console.error('[api] Request failed:', {
-        url,
-        error: err.message,
-        status: err.status || 'unknown',
-        code: err.code || 'unknown'
-      });
-    }
-    
+
     throw err;
   }
 }
@@ -623,4 +612,12 @@ export async function checkFeasibility(userInput: string): Promise<FeasibilityRe
     method: 'POST',
     body: JSON.stringify({ userInput }),
   });
+}
+
+// ─── Health Check ─────────────────────────────────────────────────────────────
+
+/** GET /health — check if backend is reachable */
+export async function checkBackendHealth(): Promise<{ status: string; service: string }> {
+  const base = (import.meta.env.VITE_API_BASE_URL ?? '');
+  return request<{ status: string; service: string }>(`${base}/health`);
 }
