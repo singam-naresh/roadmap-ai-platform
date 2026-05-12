@@ -13,23 +13,21 @@ import java.util.Map;
 public class AiProductivityAssistantApplication {
 
     public static void main(String[] args) {
-        // Load .env file from the project root (backend/.env) before Spring starts.
-        // This means you never need to set env vars manually in your IDE or terminal.
+        // Load .env for local development only.
+        // In production (Render/Docker), real env vars are already set
+        // and loadDotEnv() will not override them.
         loadDotEnv();
+
+        // Log the port before Spring starts so Render can detect it early
+        String port = System.getenv("PORT");
+        if (port == null) port = System.getProperty("PORT", "8080");
+        System.out.println("[startup] Binding to port: " + port);
+        System.out.println("[startup] Profile: " + System.getenv().getOrDefault("SPRING_PROFILES_ACTIVE", "dev"));
+
         SpringApplication.run(AiProductivityAssistantApplication.class, args);
     }
 
-    /**
-     * Reads backend/.env and sets each KEY=VALUE as a system property
-     * so Spring Boot's ${KEY} placeholders resolve correctly.
-     *
-     * Rules:
-     * - Skips blank lines and lines starting with #
-     * - Does NOT override variables already set in the real environment
-     *   (so production env vars always win over the .env file)
-     */
     private static void loadDotEnv() {
-        // Look for .env next to the jar (production) or in the backend/ directory (dev)
         String[] candidates = { ".env", "backend/.env", "../.env" };
 
         for (String candidate : candidates) {
@@ -50,26 +48,24 @@ public class AiProductivityAssistantApplication {
                     String key   = line.substring(0, eq).trim();
                     String value = line.substring(eq + 1).trim();
 
-                    // Strip surrounding quotes if present
                     if (value.startsWith("\"") && value.endsWith("\"") && value.length() > 1) {
                         value = value.substring(1, value.length() - 1);
                     }
 
-                    // Only set if not already defined in the real environment
+                    // Never override real environment variables
                     if (System.getenv(key) == null && System.getProperty(key) == null) {
                         System.setProperty(key, value);
-                        loaded.put(key, key.toLowerCase().contains("key") ? "***" : value);
+                        loaded.put(key, key.toLowerCase().contains("key") || key.toLowerCase().contains("secret") ? "***" : value);
                     }
                 }
 
                 if (!loaded.isEmpty()) {
                     System.out.println("[.env] Loaded " + loaded.size() + " variable(s) from " + file.getAbsolutePath());
-                    loaded.forEach((k, v) -> System.out.println("[.env]   " + k + " = " + v));
                 }
-                return; // stop after first .env found
+                return;
 
             } catch (Exception e) {
-                System.err.println("[.env] Failed to read " + file.getAbsolutePath() + ": " + e.getMessage());
+                System.err.println("[.env] Could not read " + candidate + ": " + e.getMessage());
             }
         }
     }
